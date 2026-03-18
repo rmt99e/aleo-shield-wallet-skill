@@ -287,6 +287,7 @@ incompatible) version of a dependency.
 |---------|----------|-------------|
 | Arcane Finance | DEX | RFQ model, Schnorr signature verification |
 | Pondo | Liquid Staking | Multi-delegator, oracle rebalancing, derivative token |
+| Hyperlane | Cross-Chain | 9-program messaging stack, warp routes, Ethereum interop |
 | IZAR Protocol | Bridge | Three-program architecture (protocol + token + proxy) |
 | zPass | Identity | Privacy-preserving credentials, age verification |
 | Paxos USAD | Stablecoin | Private stablecoin on Aleo |

@@ -519,6 +519,93 @@ constants. Useful for fixed-size data structures with configurable dimensions.
 
 ---
 
+## Advanced Mapping Patterns
+
+### Unverified State Pattern
+
+Transitions cannot read mappings. For complex logic that depends on current
+on-chain state, the caller passes the state as arguments and finalize verifies it:
+
+```leo
+struct AppState {
+    admin: address,
+    paused: bool,
+    nonce: u64,
+}
+
+mapping app_state: bool => AppState;
+
+// Transition receives "unverified" state from the caller
+async transition execute_action(
+    unverified_state: AppState,  // caller claims this is current state
+    action_data: field,
+) -> Future {
+    // Use unverified_state for transition logic (e.g., check not paused)
+    assert(!unverified_state.paused);
+    return finalize_execute(unverified_state, action_data);
+}
+
+async function finalize_execute(unverified: AppState, action_data: field) {
+    // Verify against actual on-chain state
+    let actual: AppState = app_state.get(true);
+    assert_eq(unverified, actual);  // reject if stale or wrong
+
+    // Proceed with verified state...
+}
+```
+
+**This is the fundamental pattern for any Aleo app with complex state logic.**
+It's used extensively in production (e.g., Hyperlane's cross-chain messaging).
+The caller (typically your frontend) queries the mapping via API first, then
+passes it as a transition argument.
+
+### Singleton State Pattern
+
+For single-value state (program config, global counters), use a mapping keyed
+by `true`:
+
+```leo
+mapping config: bool => Config;
+
+async function finalize_init(cfg: Config) {
+    config.set(true, cfg);  // single value, keyed by `true`
+}
+
+async function finalize_read() {
+    let cfg: Config = config.get(true);
+}
+```
+
+This is cleaner than the `u8 => T` keyed by `0u8` pattern and clearly
+communicates singleton intent.
+
+### Iterator Mapping Pattern
+
+Aleo mappings cannot be enumerated. To list all entries, maintain a parallel
+index mapping:
+
+```leo
+mapping routers: u32 => address;          // domain_id => address
+mapping router_index: u32 => u32;         // sequential_index => domain_id
+mapping router_count: bool => u32;        // true => total count
+
+async function finalize_add_router(domain: u32, addr: address) {
+    assert(!routers.contains(domain));
+    routers.set(domain, addr);
+
+    // Maintain the index for enumeration
+    let count: u32 = router_count.get_or_use(true, 0u32);
+    router_index.set(count, domain);
+    router_count.set(true, count + 1u32);
+}
+```
+
+Off-chain code can then enumerate all entries by reading indices 0..count.
+This adds storage overhead but enables listing — essential for UIs and
+relayers that need to discover all entries.
+
+---
+
 ## Security Patterns
 
 **Ownership check for records:** Enforced automatically by the protocol — only

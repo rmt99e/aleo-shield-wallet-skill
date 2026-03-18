@@ -99,6 +99,7 @@ Find these at https://github.com/ProvableHQ/leo-examples
 
 | Project | Category | Description |
 |---------|----------|-------------|
+| [Hyperlane Aleo](https://github.com/hyperlane-xyz/hyperlane-aleo) | Cross-Chain | Permissionless messaging protocol, warp routes for token bridging |
 | [Arcane Finance](https://arcane.finance) | DEX | Privacy-centric RFQ + AMM exchange |
 | [Pondo](https://pondo.xyz) | Liquid Staking | Stake ALEO, receive pALEO; largest TVL on Aleo |
 | [IZAR Protocol](https://izar.xyz) | Bridge | Privacy-preserving Ethereum ↔ Aleo bridge |

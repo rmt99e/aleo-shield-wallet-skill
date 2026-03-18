@@ -70,7 +70,8 @@ aleo-dev.skill/
         │   ├── common-errors.md # Detailed error examples
         │   ├── debugging.md     # leo debug & debugging strategies
         │   ├── resources.md     # Links, tools & community
-        │   └── ecosystem-patterns.md  # NFT, DEX, staking patterns
+        │   ├── ecosystem-patterns.md  # NFT, DEX, staking patterns
+        │   └── hyperlane.md     # Cross-chain messaging via Hyperlane
         └── examples/
             ├── token.leo        # Token with private/public transfers
             ├── registry.leo     # First-write-wins registry

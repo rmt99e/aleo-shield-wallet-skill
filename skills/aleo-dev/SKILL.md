@@ -63,6 +63,7 @@ guidance. Multiple may apply.
 | `references/debugging.md` | `leo debug` REPL, TUI mode, cheatcodes, debugging strategies |
 | `references/resources.md` | Official docs, repos, tools, IDE extensions, community links |
 | `references/ecosystem-patterns.md` | Real-world patterns: NFTs (ARC-721), DEX (RFQ), liquid staking, multi-token |
+| `references/hyperlane.md` | Cross-chain messaging via Hyperlane: architecture, warp routes, Ethereum interop |
 | `examples/token.leo` | Reference token program with private and public transfers |
 | `examples/registry.leo` | First-write-wins registry pattern with finalize |
 | `examples/multisig.leo` | Multi-signature approval pattern |
