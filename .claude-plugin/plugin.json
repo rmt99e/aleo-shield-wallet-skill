@@ -1,0 +1,24 @@
+{
+  "name": "aleo-dev",
+  "version": "0.2.0",
+  "description": "Expert assistant for building on the Aleo blockchain — Leo programs, Provable SDK, Shield wallet, zk-proof architecture, and deployment.",
+  "author": {
+    "name": "rmt99e",
+    "email": "15927901+rmt99e@users.noreply.github.com",
+    "url": "https://github.com/rmt99e"
+  },
+  "repository": "https://github.com/rmt99e/aleo-dev.skill",
+  "license": "MIT",
+  "keywords": [
+    "aleo",
+    "leo",
+    "zero-knowledge",
+    "zk-proofs",
+    "blockchain",
+    "provable",
+    "shield-wallet",
+    "snarkvm",
+    "web3",
+    "privacy"
+  ]
+}
