@@ -8,6 +8,10 @@ Cosmos, Solana, etc.). The Aleo implementation is production-ready (v1.0.0).
 - Docs: https://docs.hyperlane.xyz/
 - License: Apache 2.0
 
+> **Note:** Code examples in this file are illustrative patterns based on
+> Hyperlane's architecture. For exact syntax and struct definitions, refer
+> to the source code in the repo above.
+
 ---
 
 ## Architecture Overview

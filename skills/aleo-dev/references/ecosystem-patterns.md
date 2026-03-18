@@ -3,6 +3,9 @@
 Real-world patterns from production Aleo applications. These go beyond basic
 tutorials — they represent how teams actually build on Aleo.
 
+> **Note:** Code examples are illustrative patterns inspired by these projects,
+> not literal source code. Refer to each project's repo for exact syntax.
+
 ---
 
 ## NFT Pattern (ARC-721 / ARC-722)
@@ -120,7 +123,7 @@ struct Quote {
     amount_in: u64,
     amount_out: u64,
     nonce: field,        // unique per quote, prevents replay
-    expiry: u64,         // block height deadline
+    expiry: u32,         // block height deadline
 }
 
 mapping executed_nonces: field => bool;  // replay prevention
@@ -131,11 +134,11 @@ mapping executed_nonces: field => bool;  // replay prevention
 ```leo
 async transition fill_quote(
     quote: Quote,
-    signature: signature,  // maker's signature over the quote
+    sig: signature,  // maker's signature over the quote
 ) -> Future {
     // Verify maker signed this quote
     let quote_hash: field = BHP256::hash_to_field(quote);
-    assert(signature::verify(signature, quote.maker, quote_hash));
+    assert(sig.verify(quote.maker, quote_hash));
 
     // Execute both sides of the swap via cross-program calls
     let f1: Future = token_a.aleo/transfer_public(
@@ -150,7 +153,7 @@ async transition fill_quote(
 
 async function finalize_fill(
     f1: Future, f2: Future,
-    nonce: field, expiry: u64,
+    nonce: field, expiry: u32,
 ) {
     f1.await();
     f2.await();

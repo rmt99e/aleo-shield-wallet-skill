@@ -679,8 +679,7 @@ leo deploy --estimate-fee          # estimate deployment cost without deploying
 leo upgrade                        # upgrade a deployed program (requires upgrade annotation)
 leo query program <id>             # check if program is deployed
 leo query mapping <prog> <map> <key>  # read a mapping value
-leo debug <transition> <args>      # interactive debugger REPL
-leo debug --tui <transition> <args>  # debugger with TUI interface
+leo debug <transition> <args>      # interactive debugger (v3.5.0+)
 leo fmt                            # auto-format .leo files (v3.5.0+)
 leo abi                            # extract ABI from compiled program (v3.5.0+)
 leo devnode                        # start a local dev node (v3.5.0+)

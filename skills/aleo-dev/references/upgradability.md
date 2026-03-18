@@ -12,20 +12,16 @@ Every Leo program must have a `constructor`. The constructor runs once at deploy
 time and sets initial program metadata.
 
 ```leo
-program my_token.aleo {
+program my_token.aleo;
 
-    @admin(address="aleo1admin...")
-    async constructor() {
-        // Runs once at deployment
-        // self.edition starts at 0 and auto-increments on each upgrade
-    }
-
-    // ... transitions, mappings, etc.
+@admin(address="aleo1admin...")
+async constructor() {
+    // Runs once at deployment
+    // self.edition starts at 0 and auto-increments on each upgrade
 }
-```
 
-> **Note:** As of Leo 3.1.0+, programs use block syntax (`program name.aleo { ... }`)
-> and the constructor is `async constructor()`.
+// ... transitions, mappings, etc.
+```
 
 ### Constructor Metadata
 
@@ -157,7 +153,7 @@ Combine `@custom` with a timelock to give users time to react before an upgrade 
 
 ```leo
 mapping pending_upgrade: u8 => field;      // checksum of pending upgrade
-mapping upgrade_timestamp: u8 => u64;      // when the upgrade was proposed
+mapping upgrade_timestamp: u8 => u32;      // block height when proposed
 
 @custom
 async constructor() {}
@@ -167,18 +163,18 @@ async transition propose_upgrade(new_checksum: field) -> Future {
     return finalize_propose(new_checksum, block.height);
 }
 
-async function finalize_propose(checksum: field, height: u64) {
+async function finalize_propose(checksum: field, height: u32) {
     pending_upgrade.set(0u8, checksum);
     upgrade_timestamp.set(0u8, height);
 }
 
 async transition execute_upgrade() -> Future {
-    return finalize_execute_upgrade(block.height);
+    return finalize_execute_upgrade();
 }
 
-async function finalize_execute_upgrade(current_height: u64) {
-    let proposed_at: u64 = upgrade_timestamp.get(0u8);
-    assert(current_height >= proposed_at + 1000u64);  // ~1000 block delay
+async function finalize_execute_upgrade() {
+    let proposed_at: u32 = upgrade_timestamp.get(0u8);
+    assert(block.height >= proposed_at + 1000u32);  // ~1000 block delay
 }
 ```
 

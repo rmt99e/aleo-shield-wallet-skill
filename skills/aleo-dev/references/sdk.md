@@ -93,11 +93,7 @@ const valid = account.verify(new TextEncoder().encode("message"), signature);
 const encrypted = account.encryptAccount("password");
 const restoredFromCipher = Account.fromCiphertext(encrypted, "password");
 
-// Validate address
-Account.isValidAddress("aleo1...");
-
-// Generate record view key
-const rvk = account.generateRecordViewKey();
+// Validate address (see also Address.isValidAddress below)
 ```
 
 Never log or transmit private keys. Use environment variables or secure
@@ -385,7 +381,7 @@ self.onmessage = async (event) => {
     const { programName, functionName, inputs, fee } = event.data;
     const pm = new ProgramManager(/* ... */);
     try {
-        const result = await pm.execute({ programName, functionName, inputs, fee });
+        const result = await pm.execute(programName, functionName, fee, false, inputs);
         self.postMessage({ success: true, txId: result });
     } catch (err) {
         self.postMessage({ success: false, error: err.message });

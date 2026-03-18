@@ -244,14 +244,11 @@ When something fails:
 ### 1. Read the error message
 Leo errors are precise. Don't skip them.
 
-### 1b. Use `leo debug` for interactive debugging
+### 1b. Use `leo debug` for interactive debugging (v3.5.0+)
 ```bash
 leo debug <transition> <inputs>
-# or with TUI mode:
-leo debug --tui <transition> <inputs>
 ```
-Step through execution, inspect variables, and set breakpoints. See
-`references/debugging.md` for full debugger reference.
+See `references/debugging.md` for debugging strategies.
 
 ### 2. Isolate the problem
 ```bash

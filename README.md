@@ -78,6 +78,15 @@ aleo-dev.skill/
             └── multisig.leo     # Multi-signature approval
 ```
 
+## Verification Status
+
+This skill was built from official documentation, GitHub repos, release notes,
+and source code analysis — not by compiling every code example or calling every
+SDK method. The Aleo ecosystem moves fast and APIs evolve across releases.
+
+If you find an error, please open an issue. Contributions from the Provable and
+Aleo teams are especially welcome.
+
 ## License
 
 MIT
