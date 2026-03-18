@@ -53,6 +53,13 @@ failure cases. This is the fastest feedback loop after `leo build`.
 
 Tests run in isolation — each test gets its own clean ledger state.
 
+**Note on `self.caller`:** In `leo test`, all test functions execute from the
+same default address. This means you cannot easily test multi-party scenarios
+(e.g., different callers) in a single test. Workarounds:
+- Use `--private-key` flag with different keys for separate `leo run`/`leo execute` calls
+- Test admin checks by running with a non-admin key and expecting failure
+- For complex multi-party tests, use a local devnet with multiple accounts
+
 ---
 
 ## Level 1: Build Check
@@ -142,7 +149,7 @@ Test both success and failure cases. Verify that invalid inputs are rejected.
 
 ```bash
 # Deploy
-leo deploy --network testnet --private-key $ALEO_PRIVATE_KEY
+leo deploy --network testnet --private-key $ALEO_PRIVATE_KEY --broadcast
 
 # Execute on testnet
 leo execute mint_private aleo1abc... 100u64 \
@@ -237,6 +244,15 @@ When something fails:
 ### 1. Read the error message
 Leo errors are precise. Don't skip them.
 
+### 1b. Use `leo debug` for interactive debugging
+```bash
+leo debug <transition> <inputs>
+# or with TUI mode:
+leo debug --tui <transition> <inputs>
+```
+Step through execution, inspect variables, and set breakpoints. See
+`references/debugging.md` for full debugger reference.
+
 ### 2. Isolate the problem
 ```bash
 # Does it build?
@@ -318,7 +334,7 @@ For full end-to-end testing with finalize:
 snarkos devnet
 
 # Terminal 2: Deploy and test
-leo deploy --network local --private-key <devnet_key>
+leo deploy --network local --private-key <devnet_key> --broadcast
 leo execute mint_private aleo1abc... 100u64 --network local --private-key <devnet_key> --broadcast --yes
 
 # Check mapping state

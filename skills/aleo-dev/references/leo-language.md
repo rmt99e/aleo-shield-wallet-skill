@@ -29,8 +29,43 @@ The program ID (`my_program.aleo`) must be globally unique on-chain. Names
 ```leo
 program my_program.aleo;
 
-// imports, structs, records, mappings, functions, transitions here
+// constructor, imports, structs, records, mappings, functions, transitions here
 ```
+
+---
+
+## Constructor (Leo 3.1.0+)
+
+Every program must have a constructor. It runs once at deployment time and
+controls the upgrade policy.
+
+```leo
+program my_program.aleo;
+
+// Immutable program — no upgrades allowed
+@noupgrade
+constructor {}
+
+// Admin-controlled upgrades
+@admin(aleo1admin_address_here)
+constructor {}
+
+// Custom upgrade logic
+@custom(approve_upgrade)
+constructor {}
+```
+
+### Constructor Metadata
+
+Available inside the constructor and transitions:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `self.edition` | `u32` | Version counter, starts at 0, auto-increments on upgrade |
+| `self.program_owner` | `address` | The deployer's address |
+| `self.checksum` | `field` | Hash of compiled bytecode |
+
+See `references/upgradability.md` for full upgrade annotation details.
 
 ---
 
@@ -414,7 +449,7 @@ async function finalize_action(nonce: field) {
 
 ---
 
-## Common Compiler Errors
+## Common Compiler Errors (Quick Reference)
 
 | Error | Likely Cause |
 |-------|-------------|
@@ -422,12 +457,11 @@ async function finalize_action(nonce: field) {
 | `cannot find variable` | Typo, wrong scope, or forgot to return a value |
 | `record type cannot appear in finalize` | You tried to use a record in `async function` |
 | `mapping operation outside of finalize` | `get`/`set`/`contains` called in a transition |
-| `transition has multiple returns of the same record type` | Leo needs distinct types or explicit tagging |
 | `program ID mismatch` | `program.json` name doesn't match `program X.aleo;` in `main.leo` |
-| `reserved keyword` | Used `owner`, `record`, or `self` as a variable/field name outside their intended context |
-| `inline function cannot be called externally` | `inline` functions are only callable from transitions or other functions |
-| `import not found` | The imported program isn't deployed or the import path is wrong |
-| `loop bound must be a constant` | For-loop bounds must be compile-time literals, not variables |
+| `missing constructor` | All programs require a constructor (Leo 3.1.0+) |
+
+For detailed BAD/GOOD code examples, error code prefixes, deployment errors,
+WASM/SDK errors, and runtime errors, see `references/common-errors.md`.
 
 ---
 
@@ -445,6 +479,8 @@ leo deploy                         # deploy to configured network
 leo deploy --estimate-fee          # estimate deployment cost without deploying
 leo query program <id>             # check if program is deployed
 leo query mapping <prog> <map> <key>  # read a mapping value
+leo debug <transition> <args>      # interactive debugger REPL
+leo debug --tui <transition> <args>  # debugger with TUI interface
 leo fmt                            # auto-format .leo files (v3.5.0+)
 leo abi                            # extract ABI from compiled program (v3.5.0+)
 leo devnode                        # start a local dev node (v3.5.0+)

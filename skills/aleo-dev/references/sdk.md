@@ -24,6 +24,36 @@ pnpm add @provablehq/sdk
 > full proof generation runs in the browser. Account management and data
 > handling work in both environments.
 
+### Network-Specific Imports
+
+The SDK provides network-specific entry points for tree-shaking and correct
+network configuration:
+
+```typescript
+// Mainnet
+import { Account, ProgramManager } from "@provablehq/sdk/mainnet.js";
+
+// Testnet
+import { Account, ProgramManager } from "@provablehq/sdk/testnet.js";
+
+// Generic (you must configure the network manually)
+import { Account, ProgramManager } from "@provablehq/sdk";
+```
+
+**Prefer network-specific imports** — they set the correct network parameters
+automatically and produce smaller bundles.
+
+### WASM Packages
+
+The SDK depends on network-specific WASM packages:
+
+```bash
+# These are installed automatically as dependencies of @provablehq/sdk
+# but can also be installed directly for advanced use:
+npm install @provablehq/wasm-mainnet
+npm install @provablehq/wasm-testnet
+```
+
 ---
 
 ## Scaffolding a New Project
@@ -328,3 +358,107 @@ The magic number is 2^128 as a field literal.
 
 **Main thread proof generation:** Always use a web worker for proof generation
 in browser apps. See the Web Worker Pattern section above.
+
+---
+
+## Delegated Proving Service
+
+For mobile, low-power, or serverless environments where local proof generation
+is impractical, the SDK supports delegating proof generation to a remote service.
+
+```typescript
+import { ProgramManager } from "@provablehq/sdk/mainnet.js";
+
+const pm = new ProgramManager("https://api.explorer.provable.com/v1");
+pm.setAccount(account);
+
+// Submit a proving request to the delegated proving service
+const provingRequest = await pm.createProvingRequest(
+    "my_program.aleo",
+    "mint_private",
+    ["aleo1abc...", "100u64"],
+    0.02  // fee
+);
+
+// The proving request is encrypted — only the proving service can execute it
+// The service generates the proof without seeing your private inputs
+const txId = await pm.submitProvingRequest(provingRequest);
+```
+
+### When to Use Delegated Proving
+
+| Scenario | Use Delegated Proving? |
+|----------|----------------------|
+| Mobile browser | Yes — limited CPU/memory |
+| Desktop browser | No — local proving is fine |
+| Server backend | No — use `leo execute` CLI |
+| Serverless/edge function | Yes — execution time limits |
+| Low-power IoT device | Yes — insufficient resources |
+
+**Privacy note:** Delegated proving uses encrypted inputs. The proving service
+generates the proof without access to your private data. However, you are
+trusting the service's availability — it's not a privacy risk but an
+availability dependency.
+
+---
+
+## Bundler Configuration
+
+The SDK uses WebAssembly and SharedArrayBuffer, which require specific bundler
+configuration.
+
+### Vite
+
+```typescript
+// vite.config.ts
+import { defineConfig } from "vite";
+
+export default defineConfig({
+    server: {
+        headers: {
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+        },
+    },
+    optimizeDeps: {
+        exclude: ["@provablehq/sdk", "@provablehq/wasm-mainnet"],
+    },
+});
+```
+
+### Webpack
+
+```javascript
+// webpack.config.js
+module.exports = {
+    resolve: {
+        fallback: {
+            crypto: require.resolve("crypto-browserify"),
+            stream: require.resolve("stream-browserify"),
+            buffer: require.resolve("buffer/"),
+        },
+    },
+    experiments: {
+        asyncWebAssembly: true,
+    },
+    devServer: {
+        headers: {
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+        },
+    },
+};
+```
+
+### Required HTTP Headers
+
+For SharedArrayBuffer support (required for WASM multi-threading), your
+server must return these headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without these headers, you'll get `SharedArrayBuffer is not defined` errors.
+See `references/common-errors.md` for more WASM troubleshooting.

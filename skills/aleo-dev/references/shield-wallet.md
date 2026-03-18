@@ -314,3 +314,112 @@ The `examples/` directory contains full reference implementations. Read
 **Fee estimation:** Before calling `requestTransaction`, consider using `ProgramManager.estimateExecutionFee` from `@provablehq/sdk` to get an accurate fee, then pass it to `Transaction.createTransaction`.
 
 **"Proving..." takes too long:** Proof generation is CPU-bound. For complex transitions, expect 10-60 seconds. Show a loading indicator and consider using a web worker (see `references/sdk.md`).
+
+---
+
+## Transaction Status Polling
+
+After submitting a transaction, poll for its status to update the UI:
+
+```tsx
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
+
+function useTransactionStatus(txId: string | null) {
+    const { transactionStatus } = useWallet();
+    const [status, setStatus] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!txId) return;
+
+        const interval = setInterval(async () => {
+            const result = await transactionStatus(txId);
+            setStatus(result);
+
+            // Stop polling when terminal state is reached
+            if (result === "Completed" || result === "Failed") {
+                clearInterval(interval);
+            }
+        }, 5000);  // poll every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [txId, transactionStatus]);
+
+    return status;
+}
+```
+
+### Status Values
+
+Status values are **PascalCase strings**:
+
+| Status | Meaning |
+|--------|---------|
+| `"Pending"` | Transaction submitted, waiting for inclusion |
+| `"Processing"` | Transaction included in a block, finalize executing |
+| `"Completed"` | Transaction finalized successfully |
+| `"Failed"` | Transaction failed (finalize reverted or rejected) |
+
+---
+
+## Transaction ID Types
+
+Shield wallet returns two different ID formats:
+
+| ID | Format | Meaning |
+|----|--------|---------|
+| Shield tracking ID | `shield_...` | Local tracking ID returned by `requestTransaction` |
+| On-chain transaction ID | `at1...` | Actual Aleo transaction ID on the network |
+
+The `shield_` tracking ID is used for wallet-side status lookups via
+`transactionStatus()`. The `at1` ID appears once the transaction is
+confirmed on-chain and can be used with block explorers and the Provable API.
+
+```tsx
+const shieldTxId = await requestTransaction(tx);  // "shield_abc123..."
+// Use shieldTxId for status polling
+const status = await transactionStatus(shieldTxId);
+
+// Once Completed, query the explorer for the on-chain at1... ID
+```
+
+---
+
+## Fetching Records (`requestRecords`)
+
+Retrieve the user's records for a specific program:
+
+```tsx
+import { useWallet } from "@provablehq/aleo-wallet-adaptor-react";
+
+function TokenBalance() {
+    const { requestRecords, connected } = useWallet();
+    const [records, setRecords] = useState([]);
+
+    async function fetchRecords() {
+        if (!connected) return;
+        const result = await requestRecords("my_token_program.aleo");
+        setRecords(result);
+    }
+
+    return (
+        <div>
+            <button onClick={fetchRecords}>Refresh Records</button>
+            {records.map((record, i) => (
+                <p key={i}>{JSON.stringify(record)}</p>
+            ))}
+        </div>
+    );
+}
+```
+
+### Important Notes on Records
+
+- **Records must be decrypted** — `requestRecords` returns decrypted plaintext
+  records. The wallet handles decryption using the user's view key.
+- **When passing records as transition inputs**, pass the decrypted record object
+  directly. The wallet re-encrypts as needed.
+- **Indexing lag** — newly created records may not appear immediately after a
+  transaction confirms. The wallet's record index can take a few seconds to
+  update. Implement a short delay or retry when fetching records after a
+  transaction.
+- **Spent records are excluded** — `requestRecords` only returns unspent records.

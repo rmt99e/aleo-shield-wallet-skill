@@ -6,25 +6,33 @@ A [Claude Code plugin](https://docs.anthropic.com/en/docs/claude-code) for Aleo 
 
 When installed, Claude Code automatically activates this skill when you're working on Aleo projects. It provides:
 
-- **Leo language guidance** — correct syntax, records, mappings, transitions, finalize blocks, and common compiler errors
-- **SDK integration** — `@provablehq/sdk` usage, account management, program execution, fee estimation
-- **Shield wallet** — full React integration pattern with `aleo-dev-toolkit`, connect buttons, transaction execution
-- **Deployment** — mainnet/testnet/devnet configuration, fee estimation, private key management
-- **Cross-program calls** — imports, future chaining, atomic composability
-- **Testing** — local run/execute workflow, CI integration, debugging strategies
-- **Architectural patterns** — custodial server, first-write-wins registry, privacy-preserving auth, program versioning
+- **Leo language guidance** — correct syntax, records, mappings, transitions, finalize blocks, constructors, and common compiler errors
+- **Program upgradability** — upgrade annotations (`@admin`, `@noupgrade`, `@custom`, `@checksum`), constructors, versioned naming fallback
+- **SDK integration** — `@provablehq/sdk` usage, network-specific imports, delegated proving, bundler configuration
+- **Shield wallet** — full React integration pattern with `aleo-dev-toolkit`, connect buttons, transaction execution, record fetching
+- **Deployment** — mainnet/testnet/devnet configuration, fee estimation, `--broadcast` flag, private key management
+- **Cross-program calls** — imports, future chaining, atomic composability, external storage access
+- **Testing & debugging** — local run/execute workflow, `leo debug` REPL, CI integration, debugging strategies
+- **Security** — ZK-specific vulnerabilities, security review checklist, common attack vectors
+- **Privacy patterns** — records vs mappings decision framework, hybrid token, sealed-bid, private voting patterns
+- **Architectural patterns** — custodial server, first-write-wins registry, privacy-preserving auth
 
 ## Install
 
+**One-line install:**
 ```bash
-claude plugin add /path/to/aleo-dev.skill
+curl -fsSL https://raw.githubusercontent.com/rmt99e/aleo-dev.skill/main/install.sh | bash
 ```
 
-Or clone and install:
-
+**Manual install:**
 ```bash
 git clone https://github.com/rmt99e/aleo-dev.skill.git
 claude plugin add ./aleo-dev.skill
+```
+
+**Direct path:**
+```bash
+claude plugin add /path/to/aleo-dev.skill
 ```
 
 ## Usage
@@ -45,6 +53,7 @@ aleo-dev.skill/
 │   └── plugin.json              # Plugin manifest
 ├── commands/
 │   └── aleo.md                  # /aleo slash command
+├── install.sh                   # One-line installer
 └── skills/
     └── aleo-dev/
         ├── SKILL.md             # Main skill definition
@@ -54,7 +63,13 @@ aleo-dev.skill/
         │   ├── shield-wallet.md # Shield wallet integration
         │   ├── networks.md      # Network config & APIs
         │   ├── cross-program.md # Cross-program calls
-        │   └── testing.md       # Testing strategies
+        │   ├── testing.md       # Testing strategies
+        │   ├── upgradability.md # Program upgrades & constructors
+        │   ├── security.md      # ZK security & review checklist
+        │   ├── privacy-patterns.md  # Privacy design patterns
+        │   ├── common-errors.md # Detailed error examples
+        │   ├── debugging.md     # leo debug & debugging strategies
+        │   └── resources.md     # Links, tools & community
         └── examples/
             ├── token.leo        # Token with private/public transfers
             ├── registry.leo     # First-write-wins registry

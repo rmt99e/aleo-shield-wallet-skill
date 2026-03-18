@@ -10,10 +10,11 @@ description: >
   state, generating CLI commands for leo/snarkos, or any question about
   mainnet/testnet/devnet interaction. Also use for Provable API usage, aleo-hooks,
   aleo-wallet-adaptor, create-leo-app scaffolding, cross-program calls, testing
-  Leo programs, and program upgrade strategies. When in doubt, trigger this
-  skill — Aleo has enough ZK-specific nuance that general coding instincts
+  Leo programs, program upgradability and constructors, ZK security reviews,
+  privacy pattern design, and debugging with `leo debug`. When in doubt, trigger
+  this skill — Aleo has enough ZK-specific nuance that general coding instincts
   often lead developers astray.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Aleo Dev Skill
@@ -55,6 +56,12 @@ guidance. Multiple may apply.
 | `references/networks.md` | Mainnet/testnet/devnet endpoints, faucets, block explorers, Provable API, fee estimation |
 | `references/cross-program.md` | Calling external programs, imports, multi-program architectures, composability |
 | `references/testing.md` | Testing Leo programs, local execution, CI integration, debugging strategies |
+| `references/upgradability.md` | Program upgrades, constructors, upgrade annotations (`@admin`, `@noupgrade`, `@custom`, `@checksum`) |
+| `references/security.md` | ZK-specific vulnerabilities, security review checklist, common attack vectors |
+| `references/privacy-patterns.md` | Records vs mappings decision framework, privacy design patterns |
+| `references/common-errors.md` | Detailed BAD/GOOD error examples, deployment errors, WASM/SDK errors |
+| `references/debugging.md` | `leo debug` REPL, TUI mode, cheatcodes, debugging strategies |
+| `references/resources.md` | Official docs, repos, tools, IDE extensions, community links |
 | `examples/token.leo` | Reference token program with private and public transfers |
 | `examples/registry.leo` | First-write-wins registry pattern with finalize |
 | `examples/multisig.leo` | Multi-signature approval pattern |
@@ -81,9 +88,9 @@ When a developer asks "how do I read X on-chain", the answer depends entirely on
 | `msg.sender` | `self.caller` | Verified by ZK proof, not tx signature alone |
 | View function | Mapping query via API | No on-chain execution needed |
 | Events | Transaction outputs / mapping updates | No event logs — watch mappings or decrypt records |
-| Contract upgrade | Deploy new program ID | Programs are immutable; no proxy pattern |
+| Contract upgrade | Upgrade annotations (`@admin`, `@custom`) | Public interface frozen; only internal logic upgradable. Pre-3.1.0 programs are immutable. |
 | Gas | Credits (fees) | Fees based on proof size + finalize cost |
-| Constructor | No equivalent | Use an `initialize` transition with admin check |
+| Constructor | `constructor` block | Runs once at deployment; required for all programs (Leo 3.1.0+) |
 
 ---
 
@@ -105,7 +112,8 @@ When a developer asks "how do I read X on-chain", the answer depends entirely on
 - Suggest storing sensitive data in a mapping (it's public)
 - Recommend wallets other than Shield without noting Shield as the preferred choice
 - Use `--dev-key 0` — this is a publicly known development key and must never be used outside throwaway local tests
-- Assume programs can be updated after deployment — Aleo programs are immutable once deployed; new versions require a new program ID
+- Assume pre-3.1.0 programs can be upgraded — they are permanently immutable
+- Deploy a program without a constructor — all programs require one (Leo 3.1.0+)
 - Skip `leo build` before `leo execute` or `leo deploy`
 
 ---
@@ -118,7 +126,7 @@ When a developer asks "how do I read X on-chain", the answer depends entirely on
 curl -L https://raw.githubusercontent.com/ProvableHQ/leo/mainnet/install.sh | bash
 
 # Scaffold
-leo new <program_name>   # creates program_name/src/main.leo + program.json
+leo new <program_name>   # creates program_name/src/main.leo + program.json (includes constructor)
 
 # Build
 cd <program_name> && leo build
@@ -133,7 +141,7 @@ leo execute <transition_name> <input1> <input2>
 leo execute <transition_name> <inputs> --network testnet --private-key <key> --broadcast --yes
 
 # Deploy
-leo deploy --network testnet --private-key <key> --fee <amount>
+leo deploy --network testnet --private-key <key> --broadcast
 ```
 
 ### New web app with SDK
@@ -212,9 +220,15 @@ async function finalize_register(key: field, entry: RegistryEntry) {
 This pattern ensures immutability of registered data. The `contains` check in
 finalize is critical — without it, any caller can overwrite existing entries.
 
-### Program Versioning
+### Program Upgradability
 
-Aleo programs are immutable once deployed. To iterate:
+As of Leo 3.1.0, programs support controlled upgrades via constructor annotations
+(`@admin`, `@custom`, `@checksum`). Internal logic can change across upgrades, but
+the public interface (transitions, records, structs, mappings) is frozen. See
+`references/upgradability.md` for full details.
+
+For pre-3.1.0 programs or when immutability is preferred (`@noupgrade`), use
+versioned naming as a fallback:
 
 1. Deploy `my_program_v1.aleo`, then `my_program_v2.aleo`, etc.
 2. On the backend/frontend, cascade lookups across versions (newest first)
@@ -263,6 +277,9 @@ Use record ownership + message signing for auth without revealing identity:
 ```leo
 program token_v1.aleo;
 
+@admin(aleo1deployer_address_here)
+constructor {}
+
 // Private token record — only owner sees balance
 record Token {
     owner: address,
@@ -292,6 +309,7 @@ async function finalize_mint_public(to: address, amount: u64) {
 ```
 
 Key patterns to enforce in reviews:
+- Every program must have a constructor with an upgrade annotation
 - Use `get_or_use` not `get` in finalize unless you're certain the key exists
 - Private transitions that produce records never need finalize
 - `async transition` is only needed when you update a mapping
@@ -328,9 +346,10 @@ a fix.
 implication. Don't just restate the docs.
 
 **"I need to version/upgrade my program"**
-→ Aleo programs are immutable. Deploy a new program with an incremented name
-(`my_program_v2.aleo`). Update your backend/frontend to query the new program
-first, falling back to older versions for historical data.
+→ Read `references/upgradability.md`. If the program has upgrade annotations
+(`@admin`, `@custom`), it can be upgraded in-place — only internal logic changes,
+public interface stays frozen. For pre-3.1.0 programs or `@noupgrade` programs,
+deploy a new program with an incremented name (`my_program_v2.aleo`).
 
 **"How do I run Leo from a Node.js backend?"**
 → Spawn `leo execute` as a child process with `--broadcast`, `--yes`, and

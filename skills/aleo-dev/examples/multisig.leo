@@ -9,6 +9,11 @@
 
 program example_multisig_v1.aleo;
 
+// ─── Constructor ────────────────────────────────────────────────────
+
+@admin(aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn)
+constructor {}
+
 // ─── Constants ──────────────────────────────────────────────────────
 // In production, make these configurable via an initialization transition.
 

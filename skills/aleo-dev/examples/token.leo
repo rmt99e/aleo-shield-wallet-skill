@@ -6,6 +6,13 @@
 
 program example_token_v1.aleo;
 
+// ─── Constructor ────────────────────────────────────────────────────
+// Required for all programs (Leo 3.1.0+). @admin allows the deployer
+// to upgrade the program later.
+
+@admin(aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn)
+constructor {}
+
 // ─── Records (private state) ────────────────────────────────────────
 
 record Token {

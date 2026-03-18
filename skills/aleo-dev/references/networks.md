@@ -75,6 +75,22 @@ Or use the Leo toolchain shortcut:
 leo execute <transition> <args> --local
 ```
 
+### Quick Devnet with `leo devnode` (v3.5.0+)
+
+For a simpler local development experience without manually running snarkOS:
+
+```bash
+# Start a local dev node (single-node devnet)
+leo devnode
+
+# In another terminal, deploy and execute against it
+leo deploy --network local --private-key $ALEO_PRIVATE_KEY --broadcast
+leo execute mint_private "aleo1abc..." "100u64" --network local --private-key $ALEO_PRIVATE_KEY --broadcast --yes
+```
+
+`leo devnode` starts faster than a full `snarkos devnet` and is ideal for
+rapid iteration during development.
+
 **Local API endpoint:**
 ```
 http://localhost:3030
@@ -91,11 +107,11 @@ accounts that hold credits. Check the devnet startup output for private keys.
 
 ```bash
 # Testnet
-leo deploy --network testnet --private-key $ALEO_PRIVATE_KEY
+leo deploy --network testnet --private-key $ALEO_PRIVATE_KEY --broadcast
 leo execute mint_private "aleo1abc..." "100u64" --network testnet --private-key $ALEO_PRIVATE_KEY
 
 # Mainnet
-leo deploy --network mainnet --private-key $ALEO_PRIVATE_KEY
+leo deploy --network mainnet --private-key $ALEO_PRIVATE_KEY --broadcast
 
 # Check if program is deployed
 leo query program my_program.aleo --network testnet
@@ -181,14 +197,14 @@ in production code.
 ```bash
 # Good — use environment variable
 export ALEO_PRIVATE_KEY="APrivateKey1..."
-leo deploy --private-key $ALEO_PRIVATE_KEY --network testnet
+leo deploy --private-key $ALEO_PRIVATE_KEY --network testnet --broadcast
 
 # Good — use a .env file (never commit it)
 # .env
 ALEO_PRIVATE_KEY=APrivateKey1...
 
 # Bad — hardcoded in script
-leo deploy --private-key APrivateKey1... --network mainnet
+leo deploy --private-key APrivateKey1... --network mainnet --broadcast
 ```
 
 Always add `.env` to `.gitignore`. Never commit private keys.
