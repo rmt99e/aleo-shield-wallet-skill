@@ -164,6 +164,30 @@ Cross-program reads only need an import when done in finalize.
 
 ---
 
+## External Storage Access (v3.5.0+)
+
+As of Leo v3.5.0, programs can read mappings and storage from other deployed
+programs directly — without needing a cross-program call:
+
+```leo
+program reader.aleo;
+
+import token.aleo;
+
+transition check_balance(user: address) -> u64 {
+    // Read another program's mapping — returns optional type
+    let balance: u32? = token.aleo/balance.get(user);
+    // Handle the optional
+    let result: u32 = balance.unwrap_or(0u32);
+    return result;
+}
+```
+
+This is useful for read-only access. For write operations (updating another
+program's state), you still need a full cross-program call.
+
+---
+
 ## Limitations
 
 - **No dynamic dispatch:** You must know at compile time which program you're

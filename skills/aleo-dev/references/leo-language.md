@@ -2,8 +2,10 @@
 
 Quick reference for writing correct, idiomatic Leo programs on Aleo.
 
-Official docs: https://docs.leo-lang.org/leo
-Leo Playground: https://play.leo-lang.org
+- Official docs: https://docs.leo-lang.org/leo
+- Leo Playground: https://play.leo-lang.org
+- Latest stable: **v3.5.0** (March 2025) — check https://github.com/ProvableHQ/leo/releases
+- Install: `cargo install leo-lang` or use the install script
 
 ---
 
@@ -44,8 +46,20 @@ program my_program.aleo;
 | `scalar` | Scalar field element |
 | `bool` | Boolean |
 | `address` | Aleo address (`aleo1...`) |
+| `signature` | Cryptographic signature (v3.5.0+) |
+| `string` | String literal |
 
 All integer literals need a type suffix: `100u64`, `0i32`, `true`.
+
+### Unit and Tuple Types
+
+```leo
+// Unit type (void return)
+transition do_something() -> () { ... }
+
+// Tuples
+let pair: (u64, address) = (100u64, aleo1abc...);
+```
 
 ### Structs (public composite types)
 ```leo
@@ -125,6 +139,32 @@ let exists: bool = balances.contains(addr);
 
 All mapping operations are only valid inside `async function` (finalize).
 They cannot appear in transitions.
+
+### Storage Variables and Vectors (v3.5.0+)
+
+```leo
+// Singleton on-chain value
+storage counter: u64;
+
+// Dynamic on-chain list
+storage items: [TokenInfo];
+```
+
+Storage variables provide simpler alternatives to single-key mapping patterns.
+
+### External Storage Access (v3.5.0+)
+
+Programs can read mappings and storage from other deployed programs:
+
+```leo
+// Read another program's storage variable
+let counter: u32? = token.aleo/counter;
+
+// Read another program's mapping
+let balance: u32? = token.aleo/balance.get(0);
+```
+
+The `?` suffix indicates the value may not exist (optional type).
 
 ---
 
@@ -315,6 +355,8 @@ Leo only supports bounded loops with compile-time-known bounds. There are no
 while loops or dynamic iteration. If you need variable-length processing,
 design around fixed-size arrays with sentinel values.
 
+Empty ranges (`0u32..0u32`) are valid as of v3.4.0.
+
 ---
 
 ## Arrays
@@ -392,17 +434,23 @@ async function finalize_action(nonce: field) {
 ## Leo CLI Quick Reference
 
 ```bash
-leo build                          # compile, check types
-leo run <transition> <args>        # execute locally (no proof, fast)
+leo build                          # compile, check types (shortcut: leo b)
+leo run <transition> <args>        # execute locally, no proof (shortcut: leo r)
 leo execute <transition> <args>    # execute with proof generation
 leo execute <transition> <args> --broadcast --yes  # execute and submit to network
 leo execute <transition> <args> --path ./contracts  # point to Leo project directory
+leo test                           # run test functions (shortcut: leo t)
+leo test <name>                    # run tests matching name
 leo deploy                         # deploy to configured network
 leo deploy --estimate-fee          # estimate deployment cost without deploying
 leo query program <id>             # check if program is deployed
 leo query mapping <prog> <map> <key>  # read a mapping value
+leo fmt                            # auto-format .leo files (v3.5.0+)
+leo abi                            # extract ABI from compiled program (v3.5.0+)
+leo devnode                        # start a local dev node (v3.5.0+)
 leo clean                          # remove build artifacts
 leo --help                         # full command reference
+leo <cmd> --json-output            # structured JSON output (v3.5.0+)
 ```
 
 Always run `leo build` before `leo execute` or `leo deploy`.

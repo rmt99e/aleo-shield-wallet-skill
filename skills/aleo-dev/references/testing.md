@@ -14,13 +14,44 @@ proof verification, and integration testing.
                    ─┼──────────────┼─
                    │   Proof Test   │  `leo execute` — full zk-proof
                   ─┼────────────────┼─
-                 │    Local Run      │  `leo run` — fast, no proof
+                 │   Built-in Test   │  `leo test` — test functions (v3.5.0+)
                 ─┼──────────────────┼─
-               │      Build Check    │  `leo build` — type checking
-              ─┴────────────────────┴─
+               │    Local Run        │  `leo run` — fast, no proof
+              ─┼────────────────────┼─
+             │      Build Check      │  `leo build` — type checking
+            ─┴──────────────────────┴─
 ```
 
 Start from the bottom; only move up when the lower level passes.
+
+---
+
+## Level 0: Built-in Tests (`leo test`) — v3.5.0+
+
+Leo has a built-in test runner. Annotate functions as tests and run them
+with `leo test` (shortcut: `leo t`):
+
+```bash
+# Run all tests
+leo test
+
+# Run tests matching a name
+leo test transfer
+
+# Run a specific test
+leo test test_mint_private
+```
+
+**What `leo test` does:**
+- Compiles with test discovery enabled
+- Runs each test function in isolation against a simulated ledger
+- Reports pass/fail for each test
+- Supports `should_fail` annotation for expected-failure tests
+
+**Use for:** Unit testing transition logic, assertion checks, and expected
+failure cases. This is the fastest feedback loop after `leo build`.
+
+Tests run in isolation — each test gets its own clean ledger state.
 
 ---
 
@@ -256,9 +287,11 @@ jobs:
       - name: Build
         run: leo build
 
-      - name: Run tests
+      - name: Run built-in tests
+        run: leo test
+
+      - name: Run manual test cases
         run: |
-          # Add your test cases here
           leo run mint_private aleo1test... 100u64
           leo run transfer_private "{owner: aleo1test..., amount: 100u64, _nonce: 0group.public}" aleo1other... 50u64
 

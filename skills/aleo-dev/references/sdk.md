@@ -2,8 +2,8 @@
 
 JavaScript/TypeScript SDK for building Aleo web applications.
 
-- NPM: `@provablehq/sdk`
-- WASM: `@provablehq/wasm`
+- NPM: `@provablehq/sdk` (latest: **0.9.18**)
+- WASM: `@provablehq/wasm` (^0.9.18)
 - Docs: https://docs.leo-lang.org/sdk/typescript/overview
 - Source: https://github.com/ProvableHQ/sdk (branch: `mainnet`)
 - Latest release: check https://github.com/ProvableHQ/sdk/releases
@@ -81,28 +81,40 @@ const programManager = new ProgramManager(
     keyProvider,
     recordProvider
 );
+// Constructor: ProgramManager(host?, keyProvider?, recordProvider?, networkClientOptions?)
 programManager.setAccount(account);
 ```
 
 ### Execute a transition
 
 ```typescript
-// Execute returns a transaction ID
-const result = await programManager.execute({
-    programName: "my_program.aleo",
-    functionName: "mint_private",
-    fee: 0.02,         // in Aleo credits — always estimate first
-    privateFee: false, // true = use a private record for the fee
-    inputs: ["aleo1abc...", "100u64"],
-    keySearchParams: { "cacheKey": "my_program.aleo/mint_private" }
-});
-console.log("Transaction ID:", result);
+// execute(programName, functionName, priorityFee, privateFee, inputs, ...)
+const txId = await programManager.execute(
+    "my_program.aleo",       // programName
+    "mint_private",          // functionName
+    0.02,                    // priorityFee in credits — always estimate first
+    false,                   // privateFee: true = use a private record for fee
+    ["aleo1abc...", "100u64"] // inputs
+);
+console.log("Transaction ID:", txId);
+```
+
+### Run locally (no fees, no broadcast)
+
+```typescript
+// run(programName, functionName, inputs, ...)
+const result = await programManager.run(
+    "my_program.aleo",
+    "mint_private",
+    ["aleo1abc...", "100u64"]
+);
 ```
 
 ### Deploy a program
 
 ```typescript
-const txId = await programManager.deploy("program source string", 0.5);
+// deploy(program, priorityFee, privateFee, ...)
+const txId = await programManager.deploy("program source string", 0.5, false);
 ```
 
 ### Estimate fees
