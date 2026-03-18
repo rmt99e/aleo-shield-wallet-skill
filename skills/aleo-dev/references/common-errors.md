@@ -263,12 +263,51 @@ transition hello() -> u64 {
 program my_program.aleo;
 
 @noupgrade
-constructor {}
+async constructor() {}
 
 transition hello() -> u64 {
     return 42u64;
 }
 ```
+
+### Ternary / If-Else Underflow (Both Branches Evaluated)
+
+```leo
+// BAD — underflow even when condition is true
+transition example(a: u64, b: u64) -> u64 {
+    return a >= b ? a - b : 0u64;
+    // Both branches execute in ZK circuits. If b > a, (a - b) underflows.
+}
+
+// GOOD — use signed intermediate or assert first
+transition example(a: u64, b: u64) -> u64 {
+    assert(a >= b);
+    return a - b;
+}
+```
+
+See `references/security.md` for more on this ZK-specific pitfall.
+
+### Recursive Function Call
+
+```leo
+// BAD — Leo forbids all recursion (direct and indirect)
+function factorial(n: u64) -> u64 {
+    if n == 0u64 { return 1u64; }
+    return n * factorial(n - 1u64);  // Error: recursive calls are not allowed
+}
+
+// GOOD — use a bounded loop instead
+function factorial_5() -> u64 {
+    let result: u64 = 1u64;
+    for i: u64 in 1u64..6u64 {
+        result *= i;
+    }
+    return result;
+}
+```
+
+Leo has no recursion — use bounded loops with compile-time-known bounds.
 
 ---
 

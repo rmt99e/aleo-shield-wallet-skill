@@ -10,8 +10,8 @@ program example_token_v1.aleo;
 // Required for all programs (Leo 3.1.0+). @admin allows the deployer
 // to upgrade the program later.
 
-@admin(aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn)
-constructor {}
+@admin(address="aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn")
+async constructor() {}
 
 // ─── Records (private state) ────────────────────────────────────────
 

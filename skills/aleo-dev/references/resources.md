@@ -10,6 +10,9 @@ Links, repos, tools, and community resources for Aleo development.
 - **SDK Docs:** https://docs.leo-lang.org/sdk/typescript/overview
 - **API Docs:** https://docs.explorer.provable.com/docs/api/v2/intro
 - **Aleo Developer Docs:** https://developer.aleo.org
+- **Wallet Adapter Docs:** https://aleo-dev-toolkit-documentation.vercel.app/docs/wallet-adapter
+- **Upgradability Guide:** https://docs.leo-lang.org/guides/upgradability
+- **Leo Syntax Cheatsheet:** https://docs.leo-lang.org/language/cheatsheet
 
 ---
 
@@ -89,6 +92,19 @@ Find these at https://github.com/ProvableHQ/leo-examples
 - **Twitter/X:** https://twitter.com/AleoHQ
 - **Forum:** https://community.aleo.org
 - **GitHub Discussions:** https://github.com/ProvableHQ/leo/discussions
+
+---
+
+## Notable Ecosystem Projects
+
+| Project | Category | Description |
+|---------|----------|-------------|
+| [Arcane Finance](https://arcane.finance) | DEX | Privacy-centric RFQ + AMM exchange |
+| [Pondo](https://pondo.xyz) | Liquid Staking | Stake ALEO, receive pALEO; largest TVL on Aleo |
+| [IZAR Protocol](https://izar.xyz) | Bridge | Privacy-preserving Ethereum ↔ Aleo bridge |
+| [zPass](https://zpass.io) | Identity | Privacy-preserving identity verification SDK |
+| Paxos USAD | Stablecoin | Private stablecoin on Aleo |
+| Circle USDC | Stablecoin | Confidential USDC via xReserve |
 
 ---
 

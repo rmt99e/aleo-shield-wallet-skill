@@ -62,6 +62,7 @@ guidance. Multiple may apply.
 | `references/common-errors.md` | Detailed BAD/GOOD error examples, deployment errors, WASM/SDK errors |
 | `references/debugging.md` | `leo debug` REPL, TUI mode, cheatcodes, debugging strategies |
 | `references/resources.md` | Official docs, repos, tools, IDE extensions, community links |
+| `references/ecosystem-patterns.md` | Real-world patterns: NFTs (ARC-721), DEX (RFQ), liquid staking, multi-token |
 | `examples/token.leo` | Reference token program with private and public transfers |
 | `examples/registry.leo` | First-write-wins registry pattern with finalize |
 | `examples/multisig.leo` | Multi-signature approval pattern |
@@ -90,7 +91,7 @@ When a developer asks "how do I read X on-chain", the answer depends entirely on
 | Events | Transaction outputs / mapping updates | No event logs — watch mappings or decrypt records |
 | Contract upgrade | Upgrade annotations (`@admin`, `@custom`) | Public interface frozen; only internal logic upgradable. Pre-3.1.0 programs are immutable. |
 | Gas | Credits (fees) | Fees based on proof size + finalize cost |
-| Constructor | `constructor` block | Runs once at deployment; required for all programs (Leo 3.1.0+) |
+| Constructor | `async constructor()` | Runs once at deployment; required for all programs (Leo 3.1.0+) |
 
 ---
 
@@ -277,8 +278,8 @@ Use record ownership + message signing for auth without revealing identity:
 ```leo
 program token_v1.aleo;
 
-@admin(aleo1deployer_address_here)
-constructor {}
+@admin(address="aleo1deployer_address_here")
+async constructor() {}
 
 // Private token record — only owner sees balance
 record Token {

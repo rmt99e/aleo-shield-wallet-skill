@@ -7,6 +7,45 @@ This reference covers Aleo-specific security concerns and a review checklist.
 
 ## ZK-Specific Vulnerabilities
 
+### CRITICAL: Records Sent to Program Addresses Are Lost Forever
+
+Programs do not have private keys. If a record is transferred to a program's
+address (rather than consumed as a transition input), **it is permanently
+unrecoverable**. No one can decrypt or spend it.
+
+```leo
+// CATASTROPHIC — tokens are lost forever
+transition bad_deposit(token: Token) -> Token {
+    return Token { owner: self.address, amount: token.amount };
+    // self.address is the PROGRAM's address — no one holds its private key
+}
+
+// CORRECT — use a mapping to track deposits, keep records owned by users
+async transition deposit(token: Token) -> Future {
+    return finalize_deposit(token.owner, token.amount);
+}
+
+async function finalize_deposit(depositor: address, amount: u64) {
+    let bal: u64 = deposits.get_or_use(depositor, 0u64);
+    deposits.set(depositor, bal + amount);
+}
+```
+
+This is the **single most dangerous footgun** in Aleo development. The protocol
+will happily create a record owned by a program address — it just can never
+be spent.
+
+### CRITICAL: Program Name Front-Running
+
+Program names are first-come-first-served on Aleo. An attacker watching
+your testnet deployments can deploy a malicious program with your intended
+mainnet name before you do.
+
+**Mitigation:**
+- Deploy your program name to mainnet early (even a placeholder)
+- Don't reveal your mainnet program name on testnet — use different names
+- Consider longer names (cheaper to deploy and harder to guess)
+
 ### 1. Information Leakage via Public Outputs
 
 Even in "private" programs, public outputs, mapping updates, and transaction
@@ -143,7 +182,56 @@ async function finalize_action(key: field) {
 `get_or_use` instead of `get`, validate arithmetic bounds, and consider all
 possible input combinations.
 
-### 8. Transaction Pattern Analysis
+### 8. Ternary Evaluates Both Branches
+
+In ZK circuits, **both branches of a ternary or if-else are always evaluated**.
+This can cause unexpected panics even when the "safe" branch would be selected.
+
+```leo
+// BAD — underflow panic even when amount <= balance
+transition withdraw(balance: u64, amount: u64) -> u64 {
+    return amount <= balance ? balance - amount : 0u64;
+    // If amount > balance, (balance - amount) STILL executes and underflows
+}
+
+// GOOD — use signed integers as intermediaries
+transition withdraw(balance: u64, amount: u64) -> u64 {
+    let diff: i128 = (balance as i128) - (amount as i128);
+    return diff >= 0i128 ? (diff as u64) : 0u64;
+}
+
+// ALSO GOOD — check first, then compute
+transition withdraw(balance: u64, amount: u64) -> u64 {
+    assert(amount <= balance);
+    return balance - amount;
+}
+```
+
+### 9. Field Type Modular Arithmetic
+
+Unlike integer types (where overflow causes proof failure), `field` operations
+use **modular arithmetic silently**. This can mask logical bugs.
+
+```leo
+// DANGEROUS — field wraps around without error
+transition field_math() -> field {
+    let a: field = 0field;
+    let b: field = 1field;
+    let result: field = a - b;  // Does NOT fail — wraps to field modulus - 1
+    return result;
+}
+
+// Integer equivalent would fail:
+// let a: u64 = 0u64;
+// let b: u64 = 1u64;
+// let result: u64 = a - b;  // FAILS — underflow
+```
+
+**Rule:** Use integer types when you need overflow/underflow detection. Only use
+`field` when you intentionally want modular arithmetic (cryptographic operations,
+hash computations).
+
+### 10. Transaction Pattern Analysis
 
 Even with private records, on-chain metadata reveals:
 - **Transaction timing** — when transactions are submitted

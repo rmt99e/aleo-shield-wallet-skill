@@ -20,10 +20,6 @@ yarn add @provablehq/sdk
 pnpm add @provablehq/sdk
 ```
 
-> **Note:** The SDK uses WebAssembly. In Node.js, program execution is limited;
-> full proof generation runs in the browser. Account management and data
-> handling work in both environments.
-
 ### Network-Specific Imports
 
 The SDK provides network-specific entry points for tree-shaking and correct
@@ -36,12 +32,18 @@ import { Account, ProgramManager } from "@provablehq/sdk/mainnet.js";
 // Testnet
 import { Account, ProgramManager } from "@provablehq/sdk/testnet.js";
 
+// Node.js (re-exports everything plus adds LocalFileKeyStore)
+import { Account, ProgramManager, LocalFileKeyStore } from "@provablehq/sdk/node.js";
+
 // Generic (you must configure the network manually)
 import { Account, ProgramManager } from "@provablehq/sdk";
 ```
 
 **Prefer network-specific imports** — they set the correct network parameters
 automatically and produce smaller bundles.
+
+`initializeWasm()` is exported directly from `@provablehq/sdk` (not only from
+`@provablehq/wasm`).
 
 ### WASM Packages
 
@@ -86,10 +88,34 @@ const restored = new Account({ privateKey: "APrivateKey1..." });
 // Sign a message
 const signature = account.sign(new TextEncoder().encode("message"));
 const valid = account.verify(new TextEncoder().encode("message"), signature);
+
+// Encrypted account storage
+const encrypted = account.encryptAccount("password");
+const restoredFromCipher = Account.fromCiphertext(encrypted, "password");
+
+// Validate address
+Account.isValidAddress("aleo1...");
+
+// Generate record view key
+const rvk = account.generateRecordViewKey();
 ```
 
 Never log or transmit private keys. Use environment variables or secure
 storage — never hardcode them.
+
+---
+
+## Address Utilities
+
+```typescript
+import { Address } from "@provablehq/sdk";
+
+// Validate an address
+const isValid = Address.isValidAddress("aleo1abc...");
+
+// Get the address of a deployed program
+const programAddr = Address.fromProgramId("my_program.aleo");
+```
 
 ---
 
@@ -147,6 +173,16 @@ const result = await programManager.run(
 const txId = await programManager.deploy("program source string", 0.5, false);
 ```
 
+### Upgrade a program (v0.9.13+)
+
+```typescript
+const txId = await programManager.buildUpgradeTransaction(
+    "updated program source string",
+    0.5,   // fee
+    false  // privateFee
+);
+```
+
 ### Estimate fees
 
 ```typescript
@@ -175,13 +211,16 @@ const block = await client.getLatestBlock();
 const source = await client.getProgram("credits.aleo");
 
 // Get a mapping value
-const value = await client.getMappingValue("token.aleo", "balances", "aleo1abc...");
+const value = await client.getProgramMappingValue("token.aleo", "balances", "aleo1abc...");
 
 // Get transaction
 const tx = await client.getTransaction("at1...");
 
-// Get unspent records (requires view key)
-const records = await client.getUnspentRecords("my_program.aleo", "Token", account, undefined, undefined, []);
+// Find unspent records (requires view key)
+const records = await client.findUnspentRecords("my_program.aleo", "Token", account, undefined, undefined, []);
+
+// Wait for transaction confirmation
+const confirmedTx = await client.waitForTransactionConfirmation(txId);
 ```
 
 ---
@@ -198,6 +237,26 @@ if (ciphertext.isOwner(viewKey)) {
     const plaintext = ciphertext.decrypt(viewKey);
     console.log(plaintext.toString());
 }
+```
+
+---
+
+## RecordScanner (v0.9.16+)
+
+```typescript
+import { RecordScanner } from "@provablehq/sdk";
+
+const scanner = new RecordScanner(account, "https://api.explorer.provable.com/v1");
+
+// Register for record scanning
+await scanner.register();
+
+// Find records for a program
+const records = await scanner.findRecords("my_program.aleo", "Token");
+
+// Find credits records
+const creditsRecord = await scanner.findCreditsRecord(0.1);  // minimum 0.1 credits
+const creditsRecords = await scanner.findCreditsRecords(1.0); // multiple records totaling 1.0
 ```
 
 ---
@@ -246,6 +305,37 @@ await keyProvider.fetchKeys("credits.aleo", "transfer_public");
 For custom programs deployed on-chain, keys are fetched automatically by
 `ProgramManager` when needed.
 
+### KeyStore / LocalFileKeyStore (v0.9.17+)
+
+```typescript
+import { AleoKeyProvider } from "@provablehq/sdk";
+// Or for Node.js with persistent file-based caching:
+import { LocalFileKeyStore } from "@provablehq/sdk/node.js";
+
+const keyStore = new LocalFileKeyStore();  // stores keys in .aleo directory
+const keyProvider = new AleoKeyProvider();
+keyProvider.useCache(true);
+
+// KeyStore interface: getProvingKey(), getVerifyingKey(), setKeys(), has(), delete(), clear()
+```
+
+### OfflineKeyProvider
+
+For air-gapped or offline scenarios where network access is unavailable, use
+`OfflineKeyProvider`. It loads keys from local storage without any network
+calls, suitable for signing and proving on isolated machines.
+
+---
+
+## Hash Function Primitives
+
+The SDK exposes hash functions that mirror Leo's in-circuit hash operations:
+
+```typescript
+import { BHP256, Poseidon2 } from "@provablehq/sdk";
+// Available: BHP256, BHP512, BHP768, BHP1024, Poseidon2, Poseidon4, Poseidon8
+```
+
 ---
 
 ## Wasm Module (browser-side)
@@ -273,17 +363,12 @@ higher-level abstractions — prefer the SDK unless you need raw crypto ops.
 | Account management | Yes | Yes |
 | Record decryption | Yes | Yes |
 | Network queries | Yes | Yes |
-| Proof generation / program execution | Yes | No (use browser) |
-| Program deployment | Yes | No |
+| Proof generation / program execution | Yes | Yes |
+| Program deployment | Yes | Yes |
 
-For server-side applications that need to trigger transactions, the pattern
-is: generate and sign in the browser, broadcast from anywhere.
-
-> **Important:** The table above applies to the `@provablehq/sdk` JavaScript
-> library only. Server-side applications can generate proofs and deploy programs
-> by spawning the `leo` CLI as a child process (see `references/networks.md`
-> for the pattern). This is how most production backends work — the SDK
-> limitation does not mean Node.js backends can't submit transactions.
+The SDK's `node.ts` entry point (`@provablehq/sdk/node.js`) re-exports
+everything from the main SDK and adds `LocalFileKeyStore` for persistent
+file-based key caching. Proof generation is fully supported in Node.js.
 
 ---
 
@@ -336,10 +421,6 @@ operations in browser code.
 **Missing await:** Almost every SDK call is async. Missing `await` leads to
 silent failures.
 
-**Confusing SDK limitation with platform limitation:** The SDK can't generate
-proofs in Node.js, but the `leo` CLI can. For server backends, spawn
-`leo execute --broadcast --yes` as a child process.
-
 **BigInt handling for field elements:** Aleo's field modulus is
 `8444461749428370424248824938781546531375899335154063827935233455917409239040`.
 When converting hashes or large numbers to field elements in JavaScript, use
@@ -367,22 +448,22 @@ For mobile, low-power, or serverless environments where local proof generation
 is impractical, the SDK supports delegating proof generation to a remote service.
 
 ```typescript
-import { ProgramManager } from "@provablehq/sdk/mainnet.js";
+import { ProgramManager, AleoNetworkClient } from "@provablehq/sdk/mainnet.js";
 
 const pm = new ProgramManager("https://api.explorer.provable.com/v1");
 pm.setAccount(account);
 
-// Submit a proving request to the delegated proving service
-const provingRequest = await pm.createProvingRequest(
+// Build a proving request
+const provingRequest = await pm.provingRequest(
     "my_program.aleo",
     "mint_private",
     ["aleo1abc...", "100u64"],
-    0.02  // fee
+    0.02
 );
 
-// The proving request is encrypted — only the proving service can execute it
-// The service generates the proof without seeing your private inputs
-const txId = await pm.submitProvingRequest(provingRequest);
+// Submit via network client
+const networkClient = new AleoNetworkClient("https://api.explorer.provable.com/v1");
+const txId = await networkClient.submitProvingRequest(provingRequest);
 ```
 
 ### When to Use Delegated Proving

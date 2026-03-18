@@ -81,15 +81,22 @@ For a simpler local development experience without manually running snarkOS:
 
 ```bash
 # Start a local dev node (single-node devnet)
-leo devnode
+leo devnode start
+
+# Advance blocks manually
+leo devnode advance
+
+# Start with fast mode (skip ZK proof generation)
+leo devnode start --skip-execution-proof
 
 # In another terminal, deploy and execute against it
 leo deploy --network local --private-key $ALEO_PRIVATE_KEY --broadcast
 leo execute mint_private "aleo1abc..." "100u64" --network local --private-key $ALEO_PRIVATE_KEY --broadcast --yes
 ```
 
-`leo devnode` starts faster than a full `snarkos devnet` and is ideal for
-rapid iteration during development.
+`leo devnode` starts faster than a full `snarkos devnet`. The
+`--skip-execution-proof` flag skips ZK proof generation for even faster
+iteration during development.
 
 **Local API endpoint:**
 ```

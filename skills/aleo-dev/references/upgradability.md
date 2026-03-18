@@ -12,14 +12,20 @@ Every Leo program must have a `constructor`. The constructor runs once at deploy
 time and sets initial program metadata.
 
 ```leo
-program my_token.aleo;
+program my_token.aleo {
 
-@admin(aleo1admin...)
-constructor {
-    // Runs once at deployment
-    // self.edition starts at 0 and auto-increments on each upgrade
+    @admin(address="aleo1admin...")
+    async constructor() {
+        // Runs once at deployment
+        // self.edition starts at 0 and auto-increments on each upgrade
+    }
+
+    // ... transitions, mappings, etc.
 }
 ```
+
+> **Note:** As of Leo 3.1.0+, programs use block syntax (`program name.aleo { ... }`)
+> and the constructor is `async constructor()`.
 
 ### Constructor Metadata
 
@@ -27,16 +33,16 @@ Inside the constructor (and transitions), the following metadata is available:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `self.edition` | `u32` | Auto-incrementing version counter, starts at 0, increments on each upgrade |
+| `self.edition` | `u16` | Auto-incrementing version counter, starts at 0, increments on each upgrade |
 | `self.program_owner` | `address` | The address that deployed (and can upgrade) the program |
-| `self.checksum` | `field` | Hash of the program's compiled bytecode |
+| `self.checksum` | `[u8; 32]` | Hash of the program's compiled bytecode |
 
 ```leo
-constructor {
+async constructor() {
     // Access metadata
-    let edition: u32 = self.edition;
+    let edition: u16 = self.edition;
     let owner: address = self.program_owner;
-    let checksum: field = self.checksum;
+    let checksum: [u8; 32] = self.checksum;
 }
 ```
 
@@ -52,20 +58,20 @@ The program is permanently immutable. No upgrades are possible after deployment.
 
 ```leo
 @noupgrade
-constructor {
+async constructor() {
     // This program can never be changed
 }
 ```
 
 Use this for programs that must be trustlessly immutable (e.g., core token contracts).
 
-### `@admin(address)`
+### `@admin(address="...")`
 
 Only the specified address can upgrade the program.
 
 ```leo
-@admin(aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn)
-constructor {
+@admin(address="aleo1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9yrgmn")
+async constructor() {
     // Only the admin address can deploy upgrades
 }
 ```
@@ -73,42 +79,38 @@ constructor {
 This is the most common upgrade pattern. The admin address controls when and how
 the program is upgraded.
 
-### `@checksum(field)`
+### `@checksum(mapping="...", key="...")`
 
-Only a program matching the specified checksum can replace this one.
+Delegates the upgrade decision to a mapping value. A DAO or governance program
+writes the approved checksum into a mapping, and this annotation checks it.
 
 ```leo
-@checksum(123456789field)
-constructor {
-    // The next version must have this exact checksum
+@checksum(mapping="basic_voting.aleo/approved_checksum", key="true")
+async constructor() {
+    // Upgrade only proceeds if the governance program has approved this checksum
 }
 ```
 
-Use this for pre-committed upgrade paths where the next version is known in advance.
+Use this for governance-gated upgrades where a separate voting program controls
+which program versions are approved.
 
-### `@custom(transition_name)`
+### `@custom`
 
-Delegates the upgrade decision to a custom transition in the program itself.
+The developer writes full custom upgrade logic directly in the constructor.
 
 ```leo
-@custom(approve_upgrade)
-constructor {
-    // Upgrade requires calling approve_upgrade first
-}
-
-async transition approve_upgrade(new_checksum: field) -> Future {
-    // Custom logic: governance vote, timelock, multisig, etc.
-    return finalize_approve_upgrade(self.caller, new_checksum);
-}
-
-async function finalize_approve_upgrade(caller: address, new_checksum: field) {
-    // Verify governance conditions
-    let votes: u64 = vote_count.get_or_use(new_checksum, 0u64);
-    assert(votes >= 100u64);  // requires 100 votes
+@custom
+async constructor() {
+    // Custom upgrade logic runs here
+    if self.edition > 0u16 {
+        // This is an upgrade (not initial deployment)
+        assert(block.height >= 1300u32);  // timelock example
+    }
 }
 ```
 
-This is the most flexible option — you can implement any upgrade governance model.
+This is the most flexible option — you can implement any upgrade governance model
+directly in the constructor body.
 
 ---
 
@@ -116,17 +118,20 @@ This is the most flexible option — you can implement any upgrade governance mo
 
 | Element | Can Change? | Notes |
 |---------|------------|-------|
-| Transition signatures | No | Public interface is frozen |
-| Record types | No | Existing records must remain valid |
-| Struct types | No | Used in mappings and cross-program calls |
-| Mapping declarations | No | Existing mapping data must remain accessible |
+| Existing transition signatures | No | Cannot modify or delete |
+| Existing record types | No | Existing records must remain valid |
+| Existing struct types | No | Used in mappings and cross-program calls |
+| Existing mapping declarations | No | Existing mapping data must remain accessible |
 | Internal transition logic | Yes | The core purpose of upgrades |
 | Inline/function helpers | Yes | Internal implementation details |
 | Constructor body | Yes | Runs again on each upgrade |
-| New private functions | Yes | Can add internal helpers |
+| **New** transitions | Yes | Can add new callable functions |
+| **New** structs/records | Yes | Can add new types |
+| **New** mappings | Yes | Can add new public state |
 
-**Key rule:** The public interface (transitions, types, mappings) is frozen after first
-deployment. Only internal logic can change. This protects programs that depend on yours.
+**Key rule:** You can *add* new components but cannot *modify or delete* existing ones.
+Existing transition signatures, types, and mappings are frozen. This protects programs
+that depend on yours.
 
 ---
 
@@ -137,8 +142,8 @@ deployment. Only internal logic can change. This protects programs that depend o
 The simplest pattern. One address controls upgrades.
 
 ```leo
-@admin(aleo1admin_address_here)
-constructor {
+@admin(address="aleo1admin_address_here")
+async constructor() {
     // Admin can push updates at any time
 }
 ```
@@ -154,8 +159,8 @@ Combine `@custom` with a timelock to give users time to react before an upgrade 
 mapping pending_upgrade: u8 => field;      // checksum of pending upgrade
 mapping upgrade_timestamp: u8 => u64;      // when the upgrade was proposed
 
-@custom(execute_upgrade)
-constructor {}
+@custom
+async constructor() {}
 
 async transition propose_upgrade(new_checksum: field) -> Future {
     assert_eq(self.caller, ADMIN);

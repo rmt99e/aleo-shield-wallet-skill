@@ -44,15 +44,19 @@ program my_program.aleo;
 
 // Immutable program — no upgrades allowed
 @noupgrade
-constructor {}
+async constructor() {}
 
 // Admin-controlled upgrades
-@admin(aleo1admin_address_here)
-constructor {}
+@admin(address="aleo1admin_address_here")
+async constructor() {}
 
-// Custom upgrade logic
-@custom(approve_upgrade)
-constructor {}
+// Custom upgrade logic (developer writes logic in constructor body)
+@custom
+async constructor() {
+    if self.edition > 0u16 {
+        // Upgrade-specific checks (e.g., timelock)
+    }
+}
 ```
 
 ### Constructor Metadata
@@ -61,9 +65,9 @@ Available inside the constructor and transitions:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `self.edition` | `u32` | Version counter, starts at 0, auto-increments on upgrade |
+| `self.edition` | `u16` | Version counter, starts at 0, auto-increments on upgrade |
 | `self.program_owner` | `address` | The deployer's address |
-| `self.checksum` | `field` | Hash of compiled bytecode |
+| `self.checksum` | `[u8; 32]` | Hash of compiled bytecode |
 
 See `references/upgradability.md` for full upgrade annotation details.
 
@@ -85,6 +89,31 @@ See `references/upgradability.md` for full upgrade annotation details.
 | `string` | String literal |
 
 All integer literals need a type suffix: `100u64`, `0i32`, `true`.
+
+### Optional Types (v3.3.0+)
+
+Any type can be made optional with `?`:
+
+```leo
+let b_some: bool? = true;
+let b_none: bool? = none;
+
+// Unwrap (panics if none)
+let val: bool = b_some.unwrap();
+
+// Unwrap with default
+let val2: bool = b_none.unwrap_or(false);
+
+// Arrays of optionals
+let arr: [u16?; 2] = [1u16, none];
+
+// Optional structs
+let point: Point? = Point { x: 8u32, y: 41u32 };
+let empty: Point? = none;
+```
+
+**Restrictions:** `address` and `signature` types cannot be optional. Structs
+containing those types also cannot be optional.
 
 ### Unit and Tuple Types
 
@@ -175,7 +204,7 @@ let exists: bool = balances.contains(addr);
 All mapping operations are only valid inside `async function` (finalize).
 They cannot appear in transitions.
 
-### Storage Variables and Vectors (v3.5.0+)
+### Storage Variables and Vectors (v3.3.0+)
 
 ```leo
 // Singleton on-chain value
@@ -185,7 +214,26 @@ storage counter: u64;
 storage items: [TokenInfo];
 ```
 
-Storage variables provide simpler alternatives to single-key mapping patterns.
+Storage variables are syntactic sugar — the compiler rewrites them into mappings
+under the hood. They are only usable in `async` functions/blocks.
+
+```leo
+// Storage variable operations (async context only)
+let val: u64? = counter;           // read (returns optional)
+let val2: u64 = counter.unwrap();  // unwrap
+let val3: u64 = counter.unwrap_or(0u64);  // unwrap with default
+counter = 42u64;                   // write
+counter = none;                    // clear
+
+// Storage vector operations (async context only)
+let length: u32 = items.len();
+let item: TokenInfo? = items.get(0u32);     // get by index (optional)
+items.set(0u32, new_item);                  // set by index
+items.push(new_item);                       // append
+items.pop();                                // remove last
+items.swap_remove(2u32);                    // swap with last and remove
+items.clear();                              // remove all
+```
 
 ### External Storage Access (v3.5.0+)
 
@@ -257,6 +305,40 @@ async function finalize_transfer_public(
 
 `self.caller` gives you the address of the caller (verified by the proof).
 It's the correct way to authenticate — don't pass `caller` as an input.
+
+### Async Blocks (Inline Finalize — v3.1.0+)
+
+Instead of a separate `async function`, you can write finalize logic inline:
+
+```leo
+async transition mint(receiver: address, amount: u64) -> Future {
+    return async {
+        let current: u64 = balances.get_or_use(receiver, 0u64);
+        balances.set(receiver, current + amount);
+    };
+}
+```
+
+This is equivalent to a named finalize function but more concise for simple cases.
+
+### Context Variables
+
+Available in transitions and constructors:
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `self.caller` | `address` | Address of the caller (program or user) |
+| `self.signer` | `address` | Address of the transaction signer (always the original user) |
+| `self.address` | `address` | This program's own address |
+| `self.edition` | `u16` | Program version counter |
+| `self.program_owner` | `address` | Program deployer's address |
+| `self.checksum` | `[u8; 32]` | Program bytecode hash |
+| `block.height` | `u32` | Current block height (finalize/async only) |
+| `block.timestamp` | `i64` | Current block timestamp (finalize/async only) |
+
+**`self.caller` vs `self.signer`:** In a direct call, both are the user. In a
+cross-program call, `self.caller` is the calling *program*, while `self.signer`
+is still the original user who signed the transaction.
 
 ---
 
@@ -372,8 +454,12 @@ if condition {
 **Important:** In ZK circuits, both branches are always evaluated. The condition
 only selects which result is used. This means:
 - Both branches must be valid (no division by zero in either branch)
+- **Unsigned subtraction in the "unused" branch can still underflow and panic**
+  (e.g., `a >= b ? a - b : 0u64` panics if `b > a` even though the "else" is selected)
 - Performance cost is the sum of both branches
 - Side effects in both branches will occur
+
+See `references/security.md` and `references/common-errors.md` for workarounds.
 
 ---
 
@@ -387,8 +473,9 @@ for i: u32 in 0u32..10u32 {
 ```
 
 Leo only supports bounded loops with compile-time-known bounds. There are no
-while loops or dynamic iteration. If you need variable-length processing,
-design around fixed-size arrays with sentinel values.
+while loops, dynamic iteration, or recursion (direct or indirect). If you
+need variable-length processing, design around fixed-size arrays with sentinel
+values.
 
 Empty ranges (`0u32..0u32`) are valid as of v3.4.0.
 
@@ -403,7 +490,32 @@ let val: u64 = arr[2];  // index access
 ```
 
 Arrays must have compile-time-known sizes. There are no dynamic arrays or
-vectors in Leo.
+vectors in Leo (use storage vectors for on-chain dynamic lists).
+
+Empty arrays (`[u8; 0] = []`) are valid as of v3.4.0.
+
+---
+
+## Const Generics (v3.3.0+)
+
+```leo
+struct Matrix::[N: u32, M: u32] {
+    data: [field; N * M],
+}
+
+let m = Matrix::[2, 2] { data: [0field, 1field, 2field, 3field] };
+
+inline sum_first_n::[N: u32](arr: [u64; N]) -> u64 {
+    let total: u64 = 0u64;
+    for i: u32 in 0u32..N {
+        total += arr[i];
+    }
+    return total;
+}
+```
+
+Const generics allow parameterizing structs and functions by compile-time
+constants. Useful for fixed-size data structures with configurable dimensions.
 
 ---
 
@@ -477,6 +589,7 @@ leo test                           # run test functions (shortcut: leo t)
 leo test <name>                    # run tests matching name
 leo deploy                         # deploy to configured network
 leo deploy --estimate-fee          # estimate deployment cost without deploying
+leo upgrade                        # upgrade a deployed program (requires upgrade annotation)
 leo query program <id>             # check if program is deployed
 leo query mapping <prog> <map> <key>  # read a mapping value
 leo debug <transition> <args>      # interactive debugger REPL

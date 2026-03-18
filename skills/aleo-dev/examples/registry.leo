@@ -10,7 +10,7 @@ program example_registry_v1.aleo;
 // ─── Constructor ────────────────────────────────────────────────────
 
 @noupgrade
-constructor {}
+async constructor() {}
 
 // ─── Types ──────────────────────────────────────────────────────────
 

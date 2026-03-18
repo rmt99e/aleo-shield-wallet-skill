@@ -157,7 +157,7 @@ Create the smallest possible program that reproduces the error:
 program debug_repro.aleo;
 
 @noupgrade
-constructor {}
+async constructor() {}
 
 // Paste only the failing logic here
 transition repro() -> u64 {

@@ -69,7 +69,8 @@ aleo-dev.skill/
         │   ├── privacy-patterns.md  # Privacy design patterns
         │   ├── common-errors.md # Detailed error examples
         │   ├── debugging.md     # leo debug & debugging strategies
-        │   └── resources.md     # Links, tools & community
+        │   ├── resources.md     # Links, tools & community
+        │   └── ecosystem-patterns.md  # NFT, DEX, staking patterns
         └── examples/
             ├── token.leo        # Token with private/public transfers
             ├── registry.leo     # First-write-wins registry
